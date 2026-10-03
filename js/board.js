@@ -80,7 +80,7 @@
 
   function tabs(list, active, onChange) {
     const el = h("div", { class: "tabs" });
-    const draw = a => { el.innerHTML = ""; list.forEach(t => el.append(h("button", { class: "tab" + (t.id === a ? " on" : ""), onclick: () => { draw(t.id); onChange(t.id); } }, t.dot ? h("span", { class: "dot", style: { background: t.dot, marginRight: "7px" } }) : null, t.label))); };
+    const draw = a => { el.innerHTML = ""; list.forEach(t => el.append(h("button", { class: "tab" + (t.id === a ? " on" : ""), onclick: () => { draw(t.id); onChange(t.id); } }, t.dot ? h("span", { class: "dot", style: { background: t.dot, marginRight: "7px" } }) : null, t.icon ? icon(t.icon) : null, t.label))); };
     draw(active);
     el.set = draw;
     return el;
@@ -118,7 +118,7 @@
   function resetSection(id) {
     const f = I.RESET[id];
     const copies = Store.list(r => f(r) && r.p !== "board").map(r => Store.del(r.id));
-    const extra = { s2: ["s2:current"], s4: ["s4:focus"] }[id] || [];
+    const extra = { s2: ["s2:current"], s4: ["s4:focus", "s4:mfocus"] }[id] || [];
     extra.forEach(x => { const c2 = Store.del(x); if (c2) copies.push(c2); });
     const rs = Store.get("resets");
     const prevResets = rs ? JSON.parse(JSON.stringify(rs.d)) : {};
@@ -194,7 +194,7 @@
   }
 
   /* ================= landing ================= */
-  const GLYPH = { ice: "note", s1: "connect", b1: "reset", s2: "shuffle", s3: "flag", s4: "edit", b2: "sound", s5: "check", s6: "drive", close: "print", lunch: "minus" };
+  const GLYPH = { ice: "note", s1: "compass", b1: "reset", s2: "shuffle", s3: "flag", s4: "edit", b2: "sound", s5: "check", s6: "drive", close: "print", lunch: "minus" };
   function Landing(host) {
     const wrap = h("div", { class: "landing" });
     const grid = h("div", { class: "grid-agenda stagger" });
@@ -400,6 +400,7 @@
         const inp = h("input", { class: "input", placeholder: o.kind === "slides" ? "Paste a Google Slides link" : "Paste a PDF link", style: { maxWidth: "420px" } });
         inp.addEventListener("change", () => { setSetting(o.urlKey, inp.value.trim()); draw(); });
         box.append(h("div", { class: "ph" }, h("div", { style: { display: "flex", flexDirection: "column", gap: "14px", alignItems: "center" } },
+          o.glyph ? h("div", { class: "pres-glyph" }, icon(o.glyph)) : null,
           h("div", { class: "h-l", style: { color: "#fff" } }, o.title),
           inp, h("div", { class: "row" }, fileButton("Or load a PDF", o.fileKey, draw)))));
       }
@@ -425,7 +426,7 @@
 
   /* ================= session 1 · IPOS Now, connecting the dots ================= */
   function S1(host) {
-    const TABS = [{ id: "canvas", label: "Canvas" }, { id: "stand", label: "Where we stand" }, { id: "trust", label: "Trust" }, { id: "dots", label: "Connecting the dots" }];
+    const TABS = [{ id: "canvas", label: "Are we exactly here?", icon: "compass" }, { id: "stand", label: "Where we stand" }, { id: "trust", label: "Trust" }, { id: "dots", label: "Connecting the dots" }];
     let tab = TABS.some(x => x.id === live().tab) && live().session === "s1" ? live().tab : "stand";
     const t = tabs(TABS, tab, id => { tab = id; if (live().session === "s1") setLive({ tab }); draw(); });
     const fr = frame(host, "IPOS Now, connecting the dots", [t]);
@@ -433,7 +434,7 @@
     function draw() {
       if (sub && sub.destroy) sub.destroy();
       fr.body.innerHTML = "";
-      if (tab === "canvas") sub = Presentation(fr.body, { urlKey: "slidesSession1", fileKey: "s1deck", kind: "slides", title: "Canvas and toolkit" });
+      if (tab === "canvas") sub = Presentation(fr.body, { urlKey: "slidesSession1", fileKey: "s1deck", kind: "slides", title: "Are we exactly here?", glyph: "compass" });
       else if (tab === "stand") sub = Stand(fr.body);
       else if (tab === "trust") sub = Trust(fr.body);
       else sub = Dots(fr.body);
@@ -949,7 +950,7 @@
 
   /* ================= session 4 ================= */
   function S4(host) {
-    const TABS = [{ id: "mood", label: "Moodboard" }, { id: "audit", label: "Toolkit audit" }, { id: "uses", label: "Uses of visuals" }];
+    const TABS = [{ id: "mood", label: "Moodboard" }, { id: "vote", label: "Moodboard vote" }, { id: "audit", label: "Toolkit audit" }];
     let tab = TABS.some(x => x.id === live().tab) && live().session === "s4" ? live().tab : "mood";
     const t = tabs(TABS, tab, id => { tab = id; if (live().session === "s4") setLive({ tab }); draw(); });
     const fr = frame(host, "Visual positioning, identity and tone", [t]);
@@ -959,10 +960,65 @@
       fr.body.innerHTML = "";
       if (tab === "mood") sub = Presentation(fr.body, { urlKey: "slidesSession4", fileKey: "s4deck", kind: "slides", title: "Visual trends" });
       else if (tab === "audit") sub = Audit(fr.body);
-      else sub = Canvas(fr.body, { s: "s4b", filter: r => r.k === "card" && r.s === "s4b", links: true, color: () => "white", ph: "Add an idea…" });
+      else sub = MoodVote(fr.body);
     }
     draw();
     return { update: ch => sub && sub.update && sub.update(ch), destroy: () => sub && sub.destroy && sub.destroy() };
+  }
+
+  function moodData() {
+    const likes = Store.list(r => r.k === "like" && r.s === "s4");
+    const rows = I.refs().map(rf => {
+      const ls = likes.filter(l => l.d.ref === rf.id);
+      const c = {}; I.ASPECTS.forEach(a => c[a.id] = ls.filter(l => (l.d.aspects || []).includes(a.id)).length);
+      return { rf, c, total: Object.values(c).reduce((x, y) => x + y, 0), voters: ls.filter(l => (l.d.aspects || []).length).length };
+    });
+    const best = {}; I.ASPECTS.forEach(a => { const top = rows.slice().sort((x, y) => y.c[a.id] - x.c[a.id])[0]; best[a.id] = top && top.c[a.id] ? top : null; });
+    const voters = new Set(likes.filter(l => (l.d.aspects || []).length).map(l => l.p)).size;
+    return { rows, best, voters };
+  }
+  function MoodVote(body) {
+    const root = h("div", { class: "mvote" });
+    const pdf = h("div", { class: "audit-pdf" });
+    const side = h("div", { class: "panel mv-side" });
+    root.append(pdf, side); body.append(root);
+    const pres = Presentation(pdf, { urlKey: "moodPdfUrl", fileKey: "s4moodpdf", kind: "pdf", title: "Reference moodboard" });
+    const count = h("span", { class: "label counter" });
+    const grid = h("div", { class: "mv-grid" });
+    const bestRow = h("div", { class: "mv-best" });
+    side.append(h("div", { class: "row", style: { justifyContent: "space-between" } }, h("span", { class: "h-m" }, "What do we like in each reference?"), h("div", { class: "row" }, count, h("button", { class: "btn sm ghost", onclick: editRefs }, icon("edit"), "List"))), grid, bestRow);
+    function fill() {
+      const D = moodData();
+      const focus = (Store.get("s4:mfocus") || { d: {} }).d.id;
+      count.textContent = D.voters + (D.voters === 1 ? " voter" : " voters");
+      const max = Math.max(1, ...D.rows.map(r => Math.max(...I.ASPECTS.map(a => r.c[a.id]))));
+      grid.style.gridTemplateColumns = `minmax(150px,1.6fr) repeat(${I.ASPECTS.length}, minmax(34px,1fr)) 34px`;
+      grid.innerHTML = "";
+      grid.append(h("div", { class: "mv-h" }), ...I.ASPECTS.map(a => h("div", { class: "mv-h mv-ah" }, h("span", null, a.label))), h("div", { class: "mv-h" }));
+      D.rows.forEach(r => {
+        const go = () => { if (r.rf.page) pres.goto(r.rf.page); };
+        grid.append(h("div", { class: "mv-name" + (focus === r.rf.id ? " focus" : ""), onclick: go }, h("span", { class: "apage" }, r.rf.page ? "p. " + r.rf.page : ""), h("span", null, r.rf.name)));
+        I.ASPECTS.forEach(a => {
+          const n = r.c[a.id], sz = n ? 10 + 22 * n / max : 0;
+          grid.append(h("div", { class: "mv-cell" + (focus === r.rf.id ? " focus" : ""), title: r.rf.name + " · " + a.label + ": " + n }, n ? h("i", { style: { width: sz + "px", height: sz + "px", opacity: .35 + .65 * n / max } }, String(n)) : null));
+        });
+        grid.append(h("div", { class: "mv-cell" + (focus === r.rf.id ? " focus" : "") }, h("button", { class: "btn sm afocus", title: "Show on screen and on phones", onclick: () => { Store.setDoc("s4:mfocus", "doc", "s4", { id: r.rf.id }); go(); } }, icon("phone"))));
+      });
+      bestRow.innerHTML = "";
+      bestRow.append(h("div", { class: "label" }, "Most liked, by aspect"), h("div", { class: "chip-list" }, I.ASPECTS.map(a => D.best[a.id] ? h("div", { class: "chip" }, h("b", null, a.label + " · "), D.best[a.id].rf.name, h("span", { class: "muted" }, " " + D.best[a.id].c[a.id])) : null)));
+    }
+    function editRefs() {
+      const ta = h("textarea", { class: "textarea", style: { minHeight: "320px", fontFamily: "ui-monospace,monospace", fontSize: "13px" } });
+      ta.value = I.refs().map(a => (a.page || "") + " | " + a.name).join("\n");
+      drawer("Moodboard references", [h("div", { class: "muted", style: { fontSize: "13px" } }, "One reference per line: page | name"), ta,
+        h("div", { class: "row" }, h("button", { class: "btn dark", onclick: () => {
+          const old = I.refs();
+          const list = ta.value.split("\n").map(l => l.trim()).filter(Boolean).map(l => { const m = l.match(/^(\d*)\s*\|\s*(.+)$/); const page = m && m[1] ? +m[1] : null, name = m ? m[2].trim() : l; return Object.assign({}, old.find(o => o.name === name) || { id: uid("m") }, { name, page }); });
+          Store.setDoc("s4:refs", "doc", "s4", { list }); closeOverlays();
+        } }, "Save"), h("button", { class: "btn ghost", onclick: () => { ta.value = I.DEFAULT_REFS.map(a => a.page + " | " + a.name).join("\n"); } }, "Restore defaults"))]);
+    }
+    fill();
+    return { update: ch => { fill(); pres.update(ch); } };
   }
 
   function auditData() {
@@ -1363,7 +1419,7 @@
       dash.append(panel("SESSION 1", "IPOS Now, connecting the dots", s1Summary(), "wide"));
       dash.append(panel("SESSION 2", "Emergency protocols", S.rounds.length ? S.rounds.map(x => [h("div", { class: "label", style: { marginTop: "6px" } }, "Round " + (x.i + 1) + " · Emergency " + (x.r.d.e + 1)), h("div", { style: { fontSize: "13px", color: "var(--ink2)" } }, x.r.d.text), x.path.length ? h("div", { class: "mini-path" }, x.path.map(p => h("div", null, p.d.text))) : h("div", { class: "muted" }, "No path yet")]) : h("div", { class: "muted" }, "—")));
       dash.append(panel("SESSION 3", "Editorial backbone", S.layers.map(x => [h("div", { class: "label", style: { marginTop: "6px" } }, x.Ly.label + " · " + x.Ly.sub), x.cards.length ? h("div", { class: "chip-list" }, x.cards.map(c => h("div", { class: "chip", "data-c": { rock: "purple", wave: "blue", wind: "green" }[x.Ly.id] }, h("b", null, c.d.month != null ? M[c.d.month].label + " · " : ""), c.d.text))) : h("div", { class: "muted" }, "—")])));
-      dash.append(panel("SESSION 4", "Identity and visuals", [s4Summary(), h("div", { class: "label", style: { marginTop: "8px" } }, "Uses of visuals"), chips(S.ideas)]));
+      dash.append(panel("SESSION 4", "Identity and visuals", [h("div", { class: "label" }, "Moodboard · most liked"), moodSummary(), h("div", { class: "label", style: { marginTop: "8px" } }, "Toolkit audit"), s4Summary()]));
       dash.append(panel("SESSION 5", "Objectives and KPIs", S.objs.map((x, i) => {
         const ms = (x.o.d.months || []).slice().sort((a, b) => a - b);
         return h("div", { style: { background: "var(--bg)", borderRadius: "12px", padding: "10px", display: "flex", flexDirection: "column", gap: "6px" } },
@@ -1430,6 +1486,15 @@
     return h("div", { style: { display: "flex", flexDirection: "column", gap: "4px" } }, I.AUDIT_COLS.map(c => { const it = D.filter(x => x.verdict && x.verdict.id === c.id); return it.length ? [h("div", { class: "row", style: { marginTop: "6px" } }, h("span", { class: "pill " + c.color }, c.label)), h("div", { class: "chip-list" }, it.map(x => h("div", { class: "chip" }, x.a.name)))] : null; }),
       D.some(x => x.verdict === "contested") ? [h("div", { class: "row", style: { marginTop: "6px" } }, h("span", { class: "pill" }, "To debate")), h("div", { class: "chip-list" }, D.filter(x => x.verdict === "contested").map(x => h("div", { class: "chip" }, x.a.name)))] : null);
   }
+  function moodSummary() {
+    const D = moodData();
+    const it = I.ASPECTS.filter(a => D.best[a.id]);
+    return it.length ? h("div", { class: "chip-list" }, it.map(a => h("div", { class: "chip" }, h("b", null, a.label + " · "), D.best[a.id].rf.name))) : h("div", { class: "muted" }, "—");
+  }
+  function moodPrintTable() {
+    const e = I.esc, D = moodData();
+    return `<table><tr><th>p.</th><th>Reference</th>${I.ASPECTS.map(a => `<th>${e(a.label)}</th>`).join("")}</tr>${D.rows.map(r => `<tr><td>${r.rf.page || ""}</td><td>${e(r.rf.name)}</td>${I.ASPECTS.map(a => `<td>${r.c[a.id] || ""}</td>`).join("")}</tr>`).join("")}</table><p class="meta">Most liked: ${I.ASPECTS.filter(a => D.best[a.id]).map(a => e(a.label) + " — " + e(D.best[a.id].rf.name)).join(" · ") || "—"}</p>`;
+  }
   function s1Print() {
     const e = I.esc, SD = standData(), TD = trustData(), DD = dotsData(), A = I.audiences(), P = I.products();
     const nm = (l, id) => e((l.find(x => x.id === id) || { name: "?" }).name);
@@ -1458,7 +1523,7 @@
     html += `<section class="pb"><h2>Session 2 · Emergency simulation</h2>${S.rounds.map(x => `<h3>Round ${x.i + 1} · Emergency ${x.r.d.e + 1}</h3><p>${e(x.r.d.text)}</p><ol>${x.path.map(p => `<li>${e(p.d.text)}</li>`).join("")}</ol>${x.loose.length ? `<p class="meta">Unplaced: ${x.loose.map(p => e(p.d.text)).join(" · ")}</p>` : ""}`).join("") || '<p class="meta">—</p>'}</section>`;
     html += `<section class="pb"><h2>Session 3 · Editorial backbone</h2>${S.layers.map(x => `<h3>${e(x.Ly.label)} · ${e(x.Ly.sub)}</h3>${list(x.cards.map(c => (c.d.month != null ? `<b>${e(M[c.d.month].label)}</b> · ` : "") + e(c.d.text)))}`).join("")}</section>`;
     const idea = id => { const c = S.ideas.find(x => x.id === id); return c ? e(c.d.text) : "?"; };
-    html += `<section class="pb"><h2>Session 4 · Visual positioning, identity and tone</h2><h3>Toolkit audit</h3>${s4PrintTable()}<h3>Uses of visuals</h3>${list(S.ideas.map(c => e(c.d.text)))}${S.links.length ? `<h3>Connections</h3>${list(S.links.map(l => idea(l.d.a) + " → " + idea(l.d.b)))}` : ""}</section>`;
+    html += `<section class="pb"><h2>Session 4 · Visual positioning, identity and tone</h2><h3>Moodboard vote</h3>${moodPrintTable()}<h3>Toolkit audit</h3>${s4PrintTable()}${S.ideas.length ? `<h3>Uses of visuals</h3>${list(S.ideas.map(c => e(c.d.text)))}` : ""}${S.links.length ? `<h3>Connections</h3>${list(S.links.map(l => idea(l.d.a) + " → " + idea(l.d.b)))}` : ""}</section>`;
     html += `<section class="pb"><h2>Session 5 · Objectives and KPIs</h2>${S.objs.map((x, i) => { const ms = (x.o.d.months || []).slice().sort((a, b) => a - b); return `<h3>Objective ${i + 1}: ${e(x.o.d.title || "—")}</h3><p class="meta">${ms.length ? "Months: " + ms.map(m => e(M[m].label)).join(", ") : "No months set"}</p><table><tr><th>KPI</th><th>Level</th><th>Data source</th><th>Owner</th></tr>${x.kpis.map(k => `<tr><td>${e(k.d.text)}</td><td>${e(k.d.level || "")}</td><td>${e(k.d.source || "—")}</td><td>${e(k.d.owner || "—")}</td></tr>`).join("")}</table>`; }).join("")}<h3>From… to… statements</h3>${list(S.stmts.map(x => "From " + e(x.d.from) + " to " + e(x.d.to)))}</section>`;
     html += `<section class="pb"><h2>Decision log</h2>${list(S.decisions.map(d => `<span class="meta">${e((I.sessionById(d.s) || { label: "" }).label)}</span> ${e(d.d.text)}`))}<h2 style="margin-top:14pt">Most pressing things to do</h2><table><tr><th></th><th>Action</th><th>Owner</th><th>Deadline</th></tr>${S.todos.map(t => `<tr><td>${t.d.done ? "✓" : "☐"}</td><td>${e(t.d.text)}</td><td>${e(t.d.owner || "")}</td><td>${e(t.d.due || "")}</td></tr>`).join("")}</table></section>`;
     html += `<div class="foot"><span>IPOS Now · Co-design workshop</span><span>HOUSEDADA</span></div>`;

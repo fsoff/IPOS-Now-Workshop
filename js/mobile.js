@@ -225,18 +225,33 @@
       return { el: [h("div", { class: "m-card" }, s, sub, c.ta, sel, c.btn), list], update: () => upd() };
     },
     s4() {
-      const TABS = [{ id: "audit", label: "Toolkit audit" }, { id: "uses", label: "Uses of visuals" }];
-      let tab = liveD().tab === "uses" ? "uses" : "audit", picked = false;
+      const TABS = [{ id: "vote", label: "Moodboard vote" }, { id: "audit", label: "Toolkit audit" }];
+      let tab = liveD().tab === "audit" ? "audit" : "vote", picked = false;
       const box = h("div", { style: { display: "contents" } });
       const s = seg(TABS, tab, id => { tab = id; picked = true; draw(); });
       let upd = () => { };
       function draw() {
         box.innerHTML = "";
-        if (tab === "uses") {
-          const c = composer("An idea for using visuals or interactivity…", v => { Store.put({ id: uid("c"), k: "card", s: "s4b", d: { text: v } }); upd(); });
-          const list = h("div", { class: "m-mine" });
-          box.append(h("div", { class: "m-card" }, h("div", { class: "h-m" }, "Uses of visuals"), c.ta, c.btn), list);
-          upd = mine(list, r => r.k === "card" && r.s === "s4b");
+        if (tab === "vote") {
+          const wrap = h("div", { style: { display: "flex", flexDirection: "column", gap: "10px" } });
+          box.append(wrap);
+          let lastFocus = null;
+          upd = () => {
+            const focus = (Store.get("s4:mfocus") || { d: {} }).d.id;
+            const rs = I.refs();
+            const done = rs.filter(rf => { const v = Store.get("like:" + ME.id + ":" + rf.id); return v && (v.d.aspects || []).length; }).length;
+            const ordered = focus ? [rs.find(x => x.id === focus)].filter(Boolean).concat(rs.filter(x => x.id !== focus)) : rs;
+            wrap.innerHTML = "";
+            wrap.append(h("div", { class: "row", style: { justifyContent: "space-between" } }, h("span", { class: "muted", style: { fontSize: "14px" } }, "Tap what you like in each reference."), h("span", { class: "pill" }, done + " / " + rs.length)));
+            ordered.forEach(rf => {
+              const id = "like:" + ME.id + ":" + rf.id; const cur = Store.get(id); const on = (cur && cur.d.aspects) || [];
+              wrap.append(h("div", { class: "m-card vote" + (rf.id === focus ? " focus" : "") },
+                h("div", { class: "row", style: { justifyContent: "space-between", alignItems: "flex-start", flexWrap: "nowrap" } }, h("div", null, h("b", null, rf.name), rf.tags ? h("div", { class: "muted", style: { fontSize: "12px" } }, rf.tags) : null), rf.id === focus ? h("span", { class: "pill red" }, "On screen") : (rf.page ? h("span", { class: "muted", style: { fontSize: "12px", whiteSpace: "nowrap" } }, "p. " + rf.page) : null)),
+                h("div", { class: "pick" }, I.ASPECTS.map(a => h("button", { class: on.includes(a.id) ? "on" : "", onclick: () => { const n = on.includes(a.id) ? on.filter(x => x !== a.id) : on.concat([a.id]); Store.put({ id, k: "like", s: "s4", d: { ref: rf.id, aspects: n } }); } }, a.label)))));
+            });
+            if (focus && focus !== lastFocus) { lastFocus = focus; window.scrollTo({ top: 0, behavior: "smooth" }); }
+          };
+          upd();
         } else {
           const wrap = h("div", { style: { display: "flex", flexDirection: "column", gap: "10px" } });
           box.append(wrap);
@@ -261,7 +276,7 @@
         }
       }
       draw();
-      return { el: [s, box], update() { const lt = liveD().tab; if (!picked && (lt === "uses" || lt === "audit") && lt !== tab) { tab = lt; s.set(tab); draw(); } else upd(); } };
+      return { el: [s, box], update() { const lt = liveD().tab; if (!picked && (lt === "vote" || lt === "audit") && lt !== tab) { tab = lt; s.set(tab); draw(); } else upd(); } };
     },
     s5() {
       let tab = "stmt";

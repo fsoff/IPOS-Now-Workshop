@@ -49,7 +49,7 @@
     close: r => r.k === "todo"
   };
   /* records the phones need to follow the room */
-  const PUBLIC_IDS = ["live", "cfg", "resets", "s1:audiences", "s1:products", "s2:current", "s4:assets", "s4:focus"];
+  const PUBLIC_IDS = ["live", "cfg", "resets", "s1:audiences", "s1:products", "s2:current", "s4:assets", "s4:focus", "s4:refs", "s4:mfocus"];
 
   /* ---------------- store ---------------- */
   const Store = {
@@ -312,6 +312,7 @@
   }
 
   const ICONS = {
+    compass: '<circle cx="12" cy="12" r="9"/><path d="M12 3.6v1.8M12 18.6v1.8M3.6 12h1.8M18.6 12h1.8"/><path d="M15.3 8.7l-2 4.6-4.6 2 2-4.6z" fill="currentColor" fill-opacity=".18"/>',
     back: '<path d="M15 6l-6 6 6 6"/>',
     home: '<path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/>',
     qr: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2"/>',
@@ -502,8 +503,10 @@
   const sessionById = id => SESSIONS.find(x => x.id === id);
 
   const ICE = [
-    { id: "hero", title: "Joan’s victory", sub: "Something IPOS has achieved — or how you see IPOS today.", color: "blue", img: ["assets/figures/joan.jpg"] },
+    { id: "hero", title: "Joan’s victory", sub: "Something IPOS has achieved — or how you would like people to see IPOS in a positive light.", color: "blue", img: ["assets/figures/joan.jpg"] },
     { id: "mach", title: "Machiavelli’s secret plan", sub: "Your secret, ambitious goal for IPOS Now.", color: "purple", img: ["assets/figures/machiavelli.jpg"] },
+    { id: "memo", title: "Did you get the memo?", sub: "THE key message about IPOS that needs to get out.", color: "yellow", img: ["assets/figures/memo.jpg"] },
+    { id: "step", title: "Please do not step on it", sub: "What we should be really careful about: what IPOS is not, or should not do.", color: "orange", img: ["assets/figures/banana.jpg"] },
     { id: "fins", title: "It gets on my fins", sub: "In everyday work, what gets on your nerves? Late arrivals, endless threads, last-minute changes…", color: "red", img: ["assets/figures/annoyed.gif"] }
   ];
 
@@ -602,6 +605,34 @@
     { id: "t19", name: "Infographics", page: 63 },
     { id: "t20", name: "Photography", page: 65 }
   ];
+  /* ---- Session 4 · moodboard references and what can be liked in each ---- */
+  const DEFAULT_REFS = [
+    { id: "m1", name: "Arca", page: 6, tags: "branding · humanitarian crisis" },
+    { id: "m2", name: "Ingrained Foundation", page: 7, tags: "photography · community relief" },
+    { id: "m3", name: "The Martin Family Initiative", page: 8, tags: "branding · graphics" },
+    { id: "m4", name: "Althero", page: 9, tags: "photography · social · branding" },
+    { id: "m5", name: "Cartografias Negras", page: 10, tags: "illustrations · territorial action" },
+    { id: "m6", name: "Future of Life Institute", page: 11, tags: "social · tech" },
+    { id: "m7", name: "Helsinki Climate", page: 12, tags: "branding · graphics · event" },
+    { id: "m8", name: "Last Mile Climate", page: 13, tags: "branding · graphics" },
+    { id: "m9", name: "Pollination", page: 14, tags: "branding · photography" },
+    { id: "m10", name: "World Climate Research Programme", page: 15, tags: "branding" },
+    { id: "m11", name: "Tiny Ocean", page: 16, tags: "social · graphics" },
+    { id: "m12", name: "The Passenger – Oceano", page: 17, tags: "photography · graphics · book" },
+    { id: "m13", name: "Ocean Stories", page: 18, tags: "graphics · museum" }
+  ];
+  const ASPECTS = [
+    { id: "tone", label: "Tone" },
+    { id: "narrative", label: "Narrative" },
+    { id: "interactivity", label: "Interactivity" },
+    { id: "human", label: "Human touch" },
+    { id: "illustration", label: "Illustrations" },
+    { id: "palette", label: "Palette" },
+    { id: "type", label: "Typography" },
+    { id: "photo", label: "Photography" }
+  ];
+  function refs() { const r = Store.get("s4:refs"); return (r && r.d && r.d.list) || DEFAULT_REFS; }
+
   function assets() { const r = Store.get("s4:assets"); return (r && r.d && r.d.list) || DEFAULT_ASSETS; }
 
   const DEFAULT_EMERGENCIES = [
@@ -628,7 +659,7 @@
 
   const AUDIT_COLS = [
     { id: "keep", label: "Keep", color: "green" },
-    { id: "expand", label: "Expand", color: "blue" },
+    { id: "expand", label: "Enhance", color: "blue" },
     { id: "less", label: "Less relevant", color: "orange" },
     { id: "retire", label: "Retire", color: "red" }
   ];
@@ -682,7 +713,7 @@
   W.IPOS = {
     LS, CFG, ROLE, RESET, PUBLIC_IDS, setDevice, ME, setName, uid, Store, Bus, Sync, setting, setSetting, Files,
     h, s, icon, debounce, esc, toast, deleteWithUndo, keyed, editable, dragFree, dragTransfer, isInteractive,
-    COLORS, SWATCH, months, SESSIONS, sessionById, ICE, SPECTRUM, MODELS, CRELE, TRUST, TOKENS, DEFAULT_AUDIENCES, DEFAULT_PRODUCTS, MODES, TONES, audiences, products, DEFAULT_ASSETS, assets, DEFAULT_EMERGENCIES, emergencies,
+    COLORS, SWATCH, months, SESSIONS, sessionById, ICE, SPECTRUM, MODELS, CRELE, TRUST, TOKENS, DEFAULT_AUDIENCES, DEFAULT_PRODUCTS, MODES, TONES, audiences, products, DEFAULT_ASSETS, assets, DEFAULT_REFS, ASPECTS, refs, DEFAULT_EMERGENCIES, emergencies,
     LAYERS, layerIcon, AUDIT_COLS, FIG, figureImg, embedSlides, embedDrive, joinURL
   };
 
