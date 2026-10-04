@@ -628,3 +628,7 @@ body.mobile{overflow:auto;font-size:16px}
 .mv-best{display:flex;flex-direction:column;gap:6px;padding-top:4px;border-top:1px solid var(--line)}
 @media (max-width:1100px){.mvote{grid-template-columns:1fr}.mvote .audit-pdf{display:none}}
 .mv-name .apage{white-space:nowrap;flex-shrink:0}
+.drive-url{font-size:13px;color:#aaa;word-break:break-all;max-width:720px}
+.drive-tile .btn:not(.ghost){background:#fff;color:#111}
+.drive-note{position:absolute;left:0;right:0;bottom:0;height:30px;display:flex;align-items:center;padding:0 14px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);background:var(--paper)}
+.drive-tile>.row>svg{width:24px;height:24px;flex-shrink:0}
