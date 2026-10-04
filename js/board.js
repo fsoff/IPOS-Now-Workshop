@@ -1362,10 +1362,29 @@
         return;
       }
       const emb = I.embedDrive(url);
-      left.append(h("a", { class: "drive-tile", href: url, target: "_blank", rel: "noopener", style: { flex: emb ? "0 0 auto" : "1", gap: "18px" } },
+      const beside = () => {
+        const w = Math.round(screen.availWidth / 2), hh = screen.availHeight;
+        const win = window.open(url, "ipos-drive", `popup=yes,width=${w},height=${hh},left=${screen.availWidth - w},top=0`);
+        if (!win) window.open(url, "_blank", "noopener");
+      };
+      const edit = () => {
+        const inp = h("input", { class: "input", value: url });
+        modal([h("div", { class: "label" }, "Session 6"), h("div", { class: "h-l", style: { margin: "6px 0 16px" } }, "Shared Drive link"), inp,
+          h("div", { class: "row", style: { justifyContent: "space-between", marginTop: "14px" } },
+            h("button", { class: "btn ghost", onclick: () => { setSetting("drive", ""); closeOverlays(); } }, "Remove"),
+            h("button", { class: "btn dark", onclick: () => { setSetting("drive", inp.value.trim()); closeOverlays(); } }, "Save"))]);
+      };
+      left.append(h("div", { class: "drive-tile", style: { flex: emb ? "0 0 auto" : "1", gap: "16px", cursor: "default" } },
         h("div", { class: "row", style: { justifyContent: "space-between" } }, h("div", { class: "label", style: { color: "#999" } }, "Shared workspace"), icon("drive")),
-        h("div", { class: emb ? "h-l" : "h-xl" }, "Open the shared Drive ↗")));
-      if (emb) left.append(h("div", { class: "panel", style: { flex: "1", overflow: "hidden", position: "relative" } }, h("iframe", { src: emb, style: { position: "absolute", inset: "0", width: "100%", height: "100%", border: "0" } })));
+        h("div", { class: emb ? "h-l" : "h-xl" }, "Google Drive"),
+        h("div", { class: "drive-url" }, url),
+        h("div", { class: "row" },
+          h("button", { class: "btn", onclick: beside }, icon("expand"), "Open beside the board"),
+          h("a", { class: "btn", href: url, target: "_blank", rel: "noopener", style: { textDecoration: "none" } }, icon("link"), "Open in a new tab"),
+          h("button", { class: "btn ghost", style: { color: "#bbb" }, onclick: edit }, icon("edit"), "Change link"))));
+      if (emb) left.append(h("div", { class: "panel", style: { flex: "1", overflow: "hidden", position: "relative", minHeight: "0" } },
+        h("iframe", { src: emb, style: { position: "absolute", inset: "0", width: "100%", height: "calc(100% - 30px)", border: "0" } }),
+        h("div", { class: "drive-note" }, "If only the Drive logo appears here, the folder is private to signed-in users: use “Open beside the board”.")));
     }
     drawLeft();
     let d = setting("drive");
